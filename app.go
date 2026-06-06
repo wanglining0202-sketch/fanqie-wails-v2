@@ -27,46 +27,87 @@ func (a *App) startup(ctx context.Context) {
 	a.client = NewFanqieClient()
 }
 
-// ── 暴露给前端的 API ──
+// ── 番茄 ──
 
-// Search 搜索书籍
 func (a *App) Search(query string) string {
 	result, err := a.client.Search(query)
-	if err != nil {
-		return jsonErr(err)
-	}
+	if err != nil { return jsonErr(err) }
 	return toJSON(result)
 }
 
-// GetBookInfo 获取书籍详情 + 章节目录
 func (a *App) GetBookInfo(bookID string) string {
 	result, err := a.client.GetBookInfo(bookID)
-	if err != nil {
-		return jsonErr(err)
-	}
+	if err != nil { return jsonErr(err) }
 	return toJSON(result)
 }
 
-// GetTrending 获取排行榜
-func (a *App) GetTrending() string {
-	result, err := a.client.GetTrending()
-	if err != nil {
-		return jsonErr(err)
-	}
-	return toJSON(result)
-}
-
-// DownloadBook 代理 API 极速下载 (tt.sjmyzq.cn)
 func (a *App) DownloadBook(bookID string, outputDir string) string {
 	if outputDir == "" {
 		home, _ := os.UserHomeDir()
-		outputDir = filepath.Join(home, "Downloads", "FanqieNovels")
+		outputDir = filepath.Join(home, "Downloads", "LaoWang")
 	}
-
 	result, err := a.client.DownloadBook(bookID, outputDir)
-	if err != nil {
-		return jsonErr(err)
+	if err != nil { return jsonErr(err) }
+	return toJSON(result)
+}
+
+// ── 起点 ──
+
+func (a *App) SearchQidian(query string) string {
+	qd := NewQidianClient()
+	results := qd.SearchQidian(query)
+	return toJSON(map[string]interface{}{"results": results, "count": len(results)})
+}
+
+func (a *App) GetQidianInfo(bookID string) string {
+	qd := NewQidianClient()
+	result, err := qd.GetQidianInfo(bookID)
+	if err != nil { return jsonErr(err) }
+	return toJSON(result)
+}
+
+func (a *App) DownloadQidian(bookID string, outputDir string) string {
+	if outputDir == "" {
+		home, _ := os.UserHomeDir()
+		outputDir = filepath.Join(home, "Downloads", "LaoWang")
 	}
+	qd := NewQidianClient()
+	result, err := qd.DownloadQidian(bookID, outputDir)
+	if err != nil { return jsonErr(err) }
+	return toJSON(result)
+}
+
+// ── 飞卢 ──
+
+func (a *App) SearchFeilu(query string) string {
+	fl := NewFeiluClient()
+	results := fl.SearchFeilu(query)
+	return toJSON(map[string]interface{}{"results": results, "count": len(results)})
+}
+
+func (a *App) GetFeiluInfo(bookID string) string {
+	fl := NewFeiluClient()
+	result, err := fl.GetFeiluInfo(bookID)
+	if err != nil { return jsonErr(err) }
+	return toJSON(result)
+}
+
+func (a *App) DownloadFeilu(bookID string, outputDir string) string {
+	if outputDir == "" {
+		home, _ := os.UserHomeDir()
+		outputDir = filepath.Join(home, "Downloads", "LaoWang")
+	}
+	fl := NewFeiluClient()
+	result, err := fl.DownloadFeilu(bookID, outputDir)
+	if err != nil { return jsonErr(err) }
+	return toJSON(result)
+}
+
+// ── 通用 ──
+
+func (a *App) GetTrending() string {
+	result, err := a.client.GetTrending()
+	if err != nil { return jsonErr(err) }
 	return toJSON(result)
 }
 

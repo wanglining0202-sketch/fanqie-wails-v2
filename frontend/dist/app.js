@@ -37,6 +37,8 @@ function persist() {
 
 // ── Wails API 封装 ──
 
+var currentPlatform = "fanqie";
+
 function goCall(method, ...args) {
   return window.go.main.App[method](...args).then(r => {
     try { return JSON.parse(r); }
@@ -47,19 +49,27 @@ function goCall(method, ...args) {
 }
 
 async function searchBooks(q) {
-  return goCall("Search", q);
+  switch (currentPlatform) {
+    case "qidian": return goCall("SearchQidian", q);
+    case "feilu":  return goCall("SearchFeilu", q);
+    default:       return goCall("Search", q);
+  }
 }
 
 async function getBookInfo(id) {
-  return goCall("GetBookInfo", id);
-}
-
-async function getTrending() {
-  return goCall("GetTrending");
+  switch (currentPlatform) {
+    case "qidian": return goCall("GetQidianInfo", id);
+    case "feilu":  return goCall("GetFeiluInfo", id);
+    default:       return goCall("GetBookInfo", id);
+  }
 }
 
 async function downloadBook(id, dir) {
-  return goCall("DownloadBook", id, dir || state.defaultDir);
+  switch (currentPlatform) {
+    case "qidian": return goCall("DownloadQidian", id, dir || state.defaultDir);
+    case "feilu":  return goCall("DownloadFeilu", id, dir || state.defaultDir);
+    default:       return goCall("DownloadBook", id, dir || state.defaultDir);
+  }
 }
 
 async function selectDir() {
@@ -203,6 +213,20 @@ async function initMain() {
   $("#chooseDefaultDir").addEventListener("click", selectDir);
   $("#dockClose").addEventListener("click", () => {
     $("#taskDock").style.display = "none";
+  });
+
+  // 平台切换
+  $$(".platform-tab").forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      currentPlatform = this.dataset.platform;
+      $$(".platform-tab").forEach(function (t) { t.classList.remove("is-active"); });
+      this.classList.add("is-active");
+      state.searchResults = [];
+      state.booksCache = {};
+      state.selectedBook = null;
+      renderSearchResults();
+      $("#bookDetail").innerHTML = '<div class="empty-box">已切换到 ' + (currentPlatform === "fanqie" ? "番茄" : currentPlatform === "qidian" ? "起点" : "飞卢") + '<br/>输入关键词搜索</div>';
+    });
   });
 
   // 自动载入热榜
@@ -362,8 +386,8 @@ function renderDetail(book) {
         <button class="segment ${fqSelected}" type="button" data-action="format" data-format="TXT" data-id="${book.id}">TXT</button>
         <button class="segment ${epubSelected}" type="button" data-action="format" data-format="EPUB" data-id="${book.id}">EPUB</button>
       </div>
-      <button class="primary" type="button" data-action="download" data-id="${book.id}">下载 (ixdzs8)</button>
-      <button class="primary" type="button" data-action="download-fanqie" data-id="${book.id}" style="background: linear-gradient(135deg, #ff6b35, #f7c948);">番茄直链</button>
+      <button class="primary" type="button" data-action="download" data-id="${book.id}">${currentPlatform === "fanqie" ? "下载 (ixdzs8)" : "下载"}</button>
+      <button class="primary" type="button" data-action="download-fanqie" data-id="${book.id}" style="background: linear-gradient(135deg, #ff6b35, #f7c948);">${currentPlatform === "fanqie" ? "番茄直链" : "全本下载"}</button>
       <button class="ghost" type="button" data-action="shelf" data-id="${book.id}">加入书架</button>
       <button class="ghost" type="button" data-action="copy-id" data-id="${book.id}">复制 ID</button>
     </div>

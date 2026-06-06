@@ -14,8 +14,24 @@ export function DownloadBook(arg1, arg2) {
   return window['go']['main']['App']['DownloadBook'](arg1, arg2);
 }
 
+export function DownloadFeilu(arg1, arg2) {
+  return window['go']['main']['App']['DownloadFeilu'](arg1, arg2);
+}
+
+export function DownloadQidian(arg1, arg2) {
+  return window['go']['main']['App']['DownloadQidian'](arg1, arg2);
+}
+
 export function GetBookInfo(arg1) {
   return window['go']['main']['App']['GetBookInfo'](arg1);
+}
+
+export function GetFeiluInfo(arg1) {
+  return window['go']['main']['App']['GetFeiluInfo'](arg1);
+}
+
+export function GetQidianInfo(arg1) {
+  return window['go']['main']['App']['GetQidianInfo'](arg1);
 }
 
 export function GetTrending() {
@@ -28,6 +44,14 @@ export function OpenDirectory(arg1) {
 
 export function Search(arg1) {
   return window['go']['main']['App']['Search'](arg1);
+}
+
+export function SearchFeilu(arg1) {
+  return window['go']['main']['App']['SearchFeilu'](arg1);
+}
+
+export function SearchQidian(arg1) {
+  return window['go']['main']['App']['SearchQidian'](arg1);
 }
 
 export function SelectDirectory() {

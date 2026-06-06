@@ -1,7 +1,7 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
   "name": "老王下载",
-  "outputfilename": "fanqie-novel-downloader",
+  "outputfilename": "老王下载",
   "frontend:install": "",
   "frontend:build": "",
   "frontend:dev:watcher": "",
@@ -11,7 +11,7 @@
     "email": ""
   },
   "info": {
-    "productVersion": "1.0.0",
-    "comments": "老王下载 v1 — Go + Wails v2 桌面版"
+    "productVersion": "2.0.0",
+    "comments": "老王下载 v2 — 多平台小说下载 (番茄·起点·飞卢)"
   }
 }

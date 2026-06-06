@@ -7,12 +7,24 @@ export function CheckActivation():Promise<string>;
 
 export function DownloadBook(arg1:string,arg2:string):Promise<string>;
 
+export function DownloadFeilu(arg1:string,arg2:string):Promise<string>;
+
+export function DownloadQidian(arg1:string,arg2:string):Promise<string>;
+
 export function GetBookInfo(arg1:string):Promise<string>;
+
+export function GetFeiluInfo(arg1:string):Promise<string>;
+
+export function GetQidianInfo(arg1:string):Promise<string>;
 
 export function GetTrending():Promise<string>;
 
 export function OpenDirectory(arg1:string):Promise<void>;
 
 export function Search(arg1:string):Promise<string>;
+
+export function SearchFeilu(arg1:string):Promise<string>;
+
+export function SearchQidian(arg1:string):Promise<string>;
 
 export function SelectDirectory():Promise<string>;

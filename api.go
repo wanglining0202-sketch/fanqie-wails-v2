@@ -724,3 +724,44 @@ func getStr(m map[string]interface{}, key string) string {
 	}
 	return ""
 }
+
+// ── 跨平台共享工具 ──
+
+type ChapterResult struct {
+	Title   string
+	Content string
+}
+
+func cnCount(s string) int {
+	n := 0
+	for _, ch := range s {
+		if ch >= 0x4e00 && ch <= 0x9fff { n++ }
+	}
+	return n
+}
+
+func stripTags(s string) string {
+	return regexp.MustCompile(`<[^>]+>`).ReplaceAllString(s, "")
+}
+
+func safeFilename(s string) string {
+	return regexp.MustCompile(`[\\/:*?"<>|]`).ReplaceAllString(s, "_")
+}
+
+func mkdir(path string) { _ = os.MkdirAll(path, 0755) }
+
+func now() float64 { return float64(time.Now().UnixNano()) / 1e9 }
+
+func since(start float64) float64 { return float64(time.Now().UnixNano())/1e9 - start }
+
+func msSleep(ms int) { time.Sleep(time.Duration(ms) * time.Millisecond) }
+
+func writeResults(path, title, author string, chapters []ChapterResult, totalChars int) {
+	f, _ := os.Create(path)
+	if f == nil { return }
+	defer f.Close()
+	fmt.Fprintf(f, "《%s》作者：%s\n\n", title, author)
+	for _, r := range chapters {
+		fmt.Fprintf(f, "%s\n\n%s\n\n", r.Title, strings.TrimSpace(r.Content))
+	}
+}
