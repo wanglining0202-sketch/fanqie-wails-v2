@@ -347,7 +347,7 @@ func (c *FanqieClient) fanqieInfo(bookID string) *BookInfo {
 	}
 
 	status := "连载中"
-	if s, ok := page["status"].(float64); ok && s == 1 {
+	if s, ok := page["status"].(float64); ok && s == 2 {
 		status = "完结"
 	}
 
