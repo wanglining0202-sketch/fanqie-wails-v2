@@ -73,10 +73,12 @@ func (c *QidianClient) GetQidianInfo(bookID string) (*BookInfo, error) {
 	// 从目录页获取完整章节列表
 	var chapters []Chapter
 	catHTML, _ := c.get("https://m.qidian.com/book/" + bookID + "/catalog/")
-	// 格式: href="//m.qidian.com/chapter/bookID/chapterID/" data-cid="chapterID" title="青山 1、归零"
+	// <a ... data-cid="794296040" title="青山 1、归零在线阅读" ...><div><h2>1、归零</h2>...</a>
 	chRe := regexp.MustCompile(`data-cid="(\d+)"[^>]*title="([^"]+)"`)
 	for _, m := range chRe.FindAllStringSubmatch(catHTML, -1) {
-		chapters = append(chapters, Chapter{ItemID: m[1], Title: strings.TrimSpace(m[2])})
+		title := strings.TrimSpace(m[2])
+		title = regexp.MustCompile(`在线阅读$`).ReplaceAllString(title, "")
+		chapters = append(chapters, Chapter{ItemID: m[1], Title: title})
 	}
 	// 回退：主页的最近章节
 	if len(chapters) == 0 {
