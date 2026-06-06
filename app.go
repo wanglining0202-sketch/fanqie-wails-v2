@@ -103,6 +103,25 @@ func (a *App) DownloadFeilu(bookID string, outputDir string) string {
 	return toJSON(result)
 }
 
+// ── 聚合站 ──
+
+func (a *App) SearchAgg(query string) string {
+	agg := NewAggregatorClient()
+	results := agg.SearchAgg(query)
+	return toJSON(map[string]interface{}{"results": results, "count": len(results)})
+}
+
+func (a *App) DownloadAgg(bookID string, outputDir string) string {
+	if outputDir == "" {
+		home, _ := os.UserHomeDir()
+		outputDir = filepath.Join(home, "Downloads", "LaoWang")
+	}
+	agg := NewAggregatorClient()
+	result, err := agg.DownloadAgg(bookID, outputDir)
+	if err != nil { return jsonErr(err) }
+	return toJSON(result)
+}
+
 // ── 通用 ──
 
 func (a *App) GetTrending() string {

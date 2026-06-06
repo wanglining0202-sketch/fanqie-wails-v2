@@ -10,6 +10,10 @@ export function CheckActivation() {
   return window['go']['main']['App']['CheckActivation']();
 }
 
+export function DownloadAgg(arg1, arg2) {
+  return window['go']['main']['App']['DownloadAgg'](arg1, arg2);
+}
+
 export function DownloadBook(arg1, arg2) {
   return window['go']['main']['App']['DownloadBook'](arg1, arg2);
 }
@@ -44,6 +48,10 @@ export function OpenDirectory(arg1) {
 
 export function Search(arg1) {
   return window['go']['main']['App']['Search'](arg1);
+}
+
+export function SearchAgg(arg1) {
+  return window['go']['main']['App']['SearchAgg'](arg1);
 }
 
 export function SearchFeilu(arg1) {

@@ -52,6 +52,7 @@ async function searchBooks(q) {
   switch (currentPlatform) {
     case "qidian": return goCall("SearchQidian", q);
     case "feilu":  return goCall("SearchFeilu", q);
+    case "agg":    return goCall("SearchAgg", q);
     default:       return goCall("Search", q);
   }
 }
@@ -68,6 +69,7 @@ async function downloadBook(id, dir) {
   switch (currentPlatform) {
     case "qidian": return goCall("DownloadQidian", id, dir || state.defaultDir);
     case "feilu":  return goCall("DownloadFeilu", id, dir || state.defaultDir);
+    case "agg":    return goCall("DownloadAgg", id, dir || state.defaultDir);
     default:       return goCall("DownloadBook", id, dir || state.defaultDir);
   }
 }
@@ -225,7 +227,7 @@ async function initMain() {
       state.booksCache = {};
       state.selectedBook = null;
       renderSearchResults();
-      $("#bookDetail").innerHTML = '<div class="empty-box">已切换到 ' + (currentPlatform === "fanqie" ? "番茄" : currentPlatform === "qidian" ? "起点" : "飞卢") + '<br/>输入关键词搜索</div>';
+      $("#bookDetail").innerHTML = '<div class="empty-box">已切换到 ' + (currentPlatform === "fanqie" ? "番茄" : currentPlatform === "qidian" ? "起点" : currentPlatform === "feilu" ? "飞卢" : "聚合站") + '<br/>输入关键词搜索</div>';
     });
   });
 

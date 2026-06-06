@@ -5,6 +5,8 @@ export function Activate(arg1:string):Promise<string>;
 
 export function CheckActivation():Promise<string>;
 
+export function DownloadAgg(arg1:string,arg2:string):Promise<string>;
+
 export function DownloadBook(arg1:string,arg2:string):Promise<string>;
 
 export function DownloadFeilu(arg1:string,arg2:string):Promise<string>;
@@ -22,6 +24,8 @@ export function GetTrending():Promise<string>;
 export function OpenDirectory(arg1:string):Promise<void>;
 
 export function Search(arg1:string):Promise<string>;
+
+export function SearchAgg(arg1:string):Promise<string>;
 
 export function SearchFeilu(arg1:string):Promise<string>;
 
