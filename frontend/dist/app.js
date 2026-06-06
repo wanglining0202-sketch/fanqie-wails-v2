@@ -41,6 +41,8 @@ function goCall(method, ...args) {
   return window.go.main.App[method](...args).then(r => {
     try { return JSON.parse(r); }
     catch { return { error: "解析失败" }; }
+  }).catch(e => {
+    return { error: "调用失败: " + (e.message || e) };
   });
 }
 
