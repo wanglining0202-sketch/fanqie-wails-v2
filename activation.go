@@ -7,16 +7,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
-
-// ── 注册码系统 ──
-// 离线验证：SHA256(固定盐 + 序号) 生成注册码
-// 验证时比对预置哈希列表
 
 const activationSalt = "FQN0v3lD0wnl0ad3r_2026"
 
-// 预生成的有效注册码哈希（16个）
-// 生成方式: SHA256(activationSalt + "0001") 等
+// 预生成的长哈希码（SHA256 盐+序号）
 var validHashes = func() map[string]bool {
 	hashes := make(map[string]bool)
 	for i := 1; i <= 16; i++ {
@@ -25,16 +21,6 @@ var validHashes = func() map[string]bool {
 	}
 	return hashes
 }()
-
-// 预先生成一份明文注册码供分发
-// FQ-XXXX-XXXX-XXXX 格式的短码也映射到这里
-var validShortCodes = map[string]bool{
-	"FQN1-V4K8-X9M2-W7P3": true,
-	"FQN2-R6T9-Y1H4-Q5L8": true,
-	"FQN3-J2C7-B8N6-Z3X1": true,
-	"FQN4-K9W5-D3F7-A6E2": true,
-	"FQN5-M8S4-P1T6-G9R3": true,
-}
 
 type activationState struct {
 	Activated bool   `json:"activated"`
@@ -69,9 +55,32 @@ func saveActivation(s *activationState) error {
 	return os.WriteFile(activationPath(), data, 0644)
 }
 
-// IsActivated 检查是否已激活
+// IsActivated 是否已激活
 func IsActivated() bool {
 	return loadActivation().Activated
+}
+
+// validateShortCode 验证自校验短码
+// 格式: XXXX-XXXX-XXXX-XXXX (19字符含分隔符 → 16字符原始码)
+// 规则: 去掉分隔符 → 16字符 → 前15位做 SHA256(盐+前缀) → 取第一个合法字符 = 校验位
+func validateShortCode(raw string) bool {
+	code := strings.ToUpper(strings.ReplaceAll(raw, "-", ""))
+	if len(code) != 16 || !strings.HasPrefix(code, "FQN") {
+		return false
+	}
+	prefix := code[:15]
+	expected := checksumChar(prefix)
+	return code[15] == expected
+}
+
+func checksumChar(prefix string) byte {
+	h := sha256Hex(activationSalt + prefix)
+	for _, c := range h {
+		if (c >= 'A' && c <= 'Z') || (c >= '2' && c <= '9') {
+			return byte(c)
+		}
+	}
+	return 'X'
 }
 
 // Activate 验证注册码
@@ -80,8 +89,8 @@ func Activate(code string) error {
 		return fmt.Errorf("注册码不能为空")
 	}
 
-	// 1. 短码直接匹配
-	if validShortCodes[code] {
+	// 1. 自校验短码
+	if validateShortCode(code) {
 		s := &activationState{
 			Activated: true,
 			Code:      maskCode(code),
@@ -90,7 +99,7 @@ func Activate(code string) error {
 		return saveActivation(s)
 	}
 
-	// 2. 长哈希码匹配
+	// 2. 长哈希码
 	if validHashes[code] {
 		s := &activationState{
 			Activated: true,
