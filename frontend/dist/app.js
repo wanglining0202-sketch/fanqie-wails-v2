@@ -127,6 +127,9 @@ function init() {
     $("#chapterOutput").textContent = $("#chapterRange").value;
   });
   $("#chooseDefaultDir").addEventListener("click", selectDir);
+  $("#dockClose").addEventListener("click", () => {
+    $("#taskDock").style.display = "none";
+  });
 
   // 自动载入热榜
   loadTrending();
