@@ -80,31 +80,56 @@ function init() {
   renderHistory();
 
   // 事件
-  $("#searchForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
+  // 搜索按钮 — 直接 click 处理（WebView2 中 form submit 可能不触发）
+  const doSearch = async () => {
     const q = $("#searchInput").value.trim();
     if (!q) return;
     $("#resultList").innerHTML = '<div class="empty-box">搜索中...</div>';
 
     const data = await searchBooks(q);
     if (data.error) {
+      // 搜索失败 → 如果输入看起来是 book_id，直接载入
+      if (/^\d{10,}$/.test(q)) {
+        $("#resultList").innerHTML = '<div class="empty-box">搜索无结果，尝试直接载入书籍...</div>';
+        await loadBookById(q);
+        return;
+      }
       $("#resultList").innerHTML = `<div class="empty-box">搜索失败: ${data.error}</div>`;
+      return;
+    }
+    const results = data.results || [];
+    if (results.length === 0 && /^\d{10,}$/.test(q)) {
+      // ixdzs8 无结果 + 看起来是 book_id → 直接载入
+      $("#resultList").innerHTML = '<div class="empty-box">搜索无结果，尝试直接载入书籍...</div>';
+      await loadBookById(q);
       return;
     }
     state.searchResults = [];
     state.booksCache = {};
-    (data.results || []).forEach(r => {
+    results.forEach(r => {
       const book = { id: r.book_id, title: r.title, author: r.author,
         source: r.source, description: r.description, status: "未知" };
       state.searchResults.push(book.id);
       state.booksCache[book.id] = book;
     });
+    if (results.length === 0) {
+      $("#resultList").innerHTML = '<div class="empty-box">未找到相关书籍<br/>试试直接输入 book_id 点"载入"</div>';
+    }
+    $("#resultCount").textContent = results.length;
     renderSearchResults();
+  };
+
+  $("#searchForm").addEventListener("submit", (e) => { e.preventDefault(); doSearch(); });
+  // 直接给搜索按钮绑 click（兜底 WebView2 不触发 submit）
+  document.querySelector("#searchForm button.primary")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    doSearch();
   });
 
   $("#loadButton").addEventListener("click", async () => {
     const id = $("#searchInput").value.trim();
     if (!id) return;
+    $("#resultList").innerHTML = '<div class="empty-box">载入中...</div>';
     await loadBookById(id);
   });
 
