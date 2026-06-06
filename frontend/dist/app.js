@@ -74,42 +74,7 @@ async function selectDir() {
 // ── 激活流程 ──
 
 function setupActivation() {
-  // 激活函数 — onclick 直接绑定
-  window._doActivate = async function () {
-    var msg = document.getElementById("activationMsg");
-    if (!msg) return;
-    msg.textContent = "正在验证...";
-    msg.style.color = "#4cc9f0";
-
-    var input = document.getElementById("activationCode");
-    var raw = (input && input.value) || "";
-    var code = raw.replace(/-/g, "");
-
-    if (code.length < 16) {
-      msg.textContent = "请输入完整注册码";
-      msg.style.color = "var(--orange)";
-      return;
-    }
-
-    var btn = document.getElementById("activationBtn");
-    if (btn) { btn.disabled = true; btn.textContent = "验证中..."; }
-
-    var result = await goCall("Activate", raw);
-    if (result.error) {
-      msg.textContent = result.error;
-      msg.style.color = "#ff6b6b";
-      if (btn) { btn.disabled = false; btn.textContent = "激活"; }
-    } else if (result.activated) {
-      msg.textContent = "激活成功！正在启动...";
-      msg.style.color = "#4cc9f0";
-      setTimeout(function () {
-        document.getElementById("activationOverlay").style.display = "none";
-        initMain();
-      }, 800);
-    }
-  };
-
-  // 自动格式化
+  // 自动格式化（激活逻辑已内联在 HTML onclick 中）
   var inp = document.getElementById("activationCode");
   if (inp) {
     inp.addEventListener("input", function () {

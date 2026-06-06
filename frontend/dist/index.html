@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>番茄小说下载器</title>
+    <title>老王下载</title>
     <link rel="stylesheet" href="./styles.css" />
     <script src="/wails/runtime.js"></script>
   </head>
@@ -12,11 +12,11 @@
     <div class="activation-overlay" id="activationOverlay">
       <div class="activation-card">
         <div class="activation-logo">🍅</div>
-        <h2>番茄小说下载器 v1</h2>
+        <h2>老王下载 v1</h2>
         <p>请输入注册码激活软件</p>
         <div class="activation-input-row">
           <input id="activationCode" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" maxlength="19" />
-          <button class="primary" type="button" id="activationBtn" onclick="window._doActivate()">激活</button>
+          <button class="primary" type="button" id="activationBtn" onclick="var m=document.getElementById('activationMsg');m.textContent='点击有效!';m.style.color='#4cc9f0';var c=document.getElementById('activationCode').value.replace(/-/g,'');if(c.length<16){m.textContent='请输入完整注册码';return;}this.disabled=true;this.textContent='验证中...';window.go.main.App.Activate(document.getElementById('activationCode').value).then(function(r){var j=JSON.parse(r);if(j.error){m.textContent=j.error;m.style.color='#ff6b6b';document.getElementById('activationBtn').disabled=false;document.getElementById('activationBtn').textContent='激活'}else if(j.activated){m.textContent='激活成功!';setTimeout(function(){document.getElementById('activationOverlay').style.display='none';initMain()},800)}}).catch(function(e){m.textContent='错误:'+e;m.style.color='#ff6b6b'})">激活</button>
         </div>
         <p id="activationMsg" class="activation-msg"></p>
       </div>
@@ -26,7 +26,7 @@
       <header class="titlebar">
         <div class="window-brand">
           <span class="mini-logo">🍅</span>
-          <span>番茄小说下载器</span>
+          <span>老王下载</span>
         </div>
         <div class="window-actions" aria-label="窗口按钮">
           <button class="icon-button" type="button" title="最小化">－</button>
@@ -37,7 +37,7 @@
       <section class="hero-panel">
         <div class="brand-lockup">
           <div class="app-logo">🍅</div>
-          <h1>番茄小说下载器</h1>
+          <h1>老王下载</h1>
         </div>
         <aside class="version-card">
           <div>

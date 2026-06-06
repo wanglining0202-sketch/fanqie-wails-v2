@@ -68,7 +68,7 @@ func main() {
 	var sb strings.Builder
 
 	sb.WriteString("═════════════════════════════════════\n")
-	sb.WriteString("  番茄小说下载器 v1 — 注册码生成器\n")
+	sb.WriteString("  老王下载 v1 — 注册码生成器\n")
 	sb.WriteString(fmt.Sprintf("  生成时间: %s\n", time.Now().Format("2006-01-02 15:04:05")))
 	sb.WriteString("═════════════════════════════════════\n\n")
 

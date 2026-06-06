@@ -16,7 +16,7 @@ func main() {
 	app := NewApp()
 
 	err := wails.Run(&options.App{
-		Title:     "番茄小说下载器",
+		Title:     "老王下载",
 		Width:     1200,
 		Height:    820,
 		MinWidth:  900,
