@@ -88,6 +88,27 @@ func (a *App) OpenDirectory(path string) {
 	runtime.BrowserOpenURL(a.ctx, "file://"+path)
 }
 
+// ── 激活 API ──
+
+// CheckActivation 检查是否已激活（前端启动时调用）
+func (a *App) CheckActivation() string {
+	return toJSON(map[string]interface{}{
+		"activated": IsActivated(),
+	})
+}
+
+// Activate 验证注册码并激活
+func (a *App) Activate(code string) string {
+	err := Activate(code)
+	if err != nil {
+		return jsonErr(err)
+	}
+	return toJSON(map[string]interface{}{
+		"activated": true,
+		"message":   "激活成功",
+	})
+}
+
 // ── 工具函数 ──
 
 func toJSON(v interface{}) string {

@@ -8,6 +8,20 @@
     <script src="/wails/runtime.js"></script>
   </head>
   <body>
+    <!-- 激活弹窗（未激活时显示，激活后隐藏） -->
+    <div class="activation-overlay" id="activationOverlay">
+      <div class="activation-card">
+        <div class="activation-logo">🍅</div>
+        <h2>番茄小说下载器 v1</h2>
+        <p>请输入注册码激活软件</p>
+        <div class="activation-input-row">
+          <input id="activationCode" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" maxlength="19" />
+          <button class="primary" type="button" id="activationBtn">激活</button>
+        </div>
+        <p id="activationMsg" class="activation-msg"></p>
+      </div>
+    </div>
+
     <main class="app-shell">
       <header class="titlebar">
         <div class="window-brand">
@@ -28,7 +42,7 @@
         <aside class="version-card">
           <div>
             <span>当前版本</span>
-            <strong>v2026.06.03.1439</strong>
+            <strong>v1.0.0</strong>
             <div class="meter"><i></i></div>
           </div>
           <button class="icon-button moon" type="button" title="切换主题">●</button>

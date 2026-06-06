@@ -69,8 +69,76 @@ async function selectDir() {
   }
 }
 
-// ── 初始化 ──
-function init() {
+// ── 激活流程 ──
+
+function setupActivation() {
+  const input = $("#activationCode");
+  const btn = $("#activationBtn");
+  const msg = $("#activationMsg");
+
+  // 自动格式化: 输入自动加分隔符
+  input.addEventListener("input", () => {
+    let raw = input.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    if (raw.length > 16) raw = raw.slice(0, 16);
+    let formatted = "";
+    for (let i = 0; i < raw.length; i++) {
+      if (i > 0 && i % 4 === 0) formatted += "-";
+      formatted += raw[i];
+    }
+    input.value = formatted;
+  });
+
+  // 回车触发激活
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") doActivate();
+  });
+
+  btn.addEventListener("click", doActivate);
+
+  async function doActivate() {
+    const code = input.value.replace(/-/g, "");
+    if (code.length < 16) {
+      msg.textContent = "请输入完整注册码";
+      msg.style.color = "var(--orange)";
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = "验证中...";
+    msg.textContent = "";
+
+    const result = await goCall("Activate", input.value);
+    if (result.error) {
+      msg.textContent = result.error;
+      msg.style.color = "#ff6b6b";
+      btn.disabled = false;
+      btn.textContent = "激活";
+    } else if (result.activated) {
+      msg.textContent = "激活成功！正在启动...";
+      msg.style.color = "#4cc9f0";
+      setTimeout(() => {
+        $("#activationOverlay").style.display = "none";
+        // 重新初始化主界面
+        initMain();
+      }, 800);
+    }
+  }
+}
+
+// ── 入口：检查激活 → 进主界面 ──
+
+async function init() {
+  const status = await goCall("CheckActivation");
+  if (!status || !status.activated) {
+    $("#activationOverlay").style.display = "flex";
+    setupActivation();
+    return;
+  }
+  initMain();
+}
+
+// ── 主界面初始化 ──
+
+async function initMain() {
   loadState();
   if (state.defaultDir) $("#defaultDir").value = state.defaultDir;
 

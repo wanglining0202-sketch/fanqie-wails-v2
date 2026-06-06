@@ -11,6 +11,7 @@
     "email": ""
   },
   "info": {
-    "comments": "番茄小说下载器 — Go + Wails v2 桌面版"
+    "productVersion": "1.0.0",
+    "comments": "番茄小说下载器 v1 — Go + Wails v2 桌面版"
   }
 }
