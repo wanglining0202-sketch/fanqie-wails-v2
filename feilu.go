@@ -166,7 +166,7 @@ func (c *FeiluClient) FetchFeiluChapter(chapterID string) string {
 	return ""
 }
 
-// DownloadFeilu 下载飞卢全书
+// DownloadFeilu 飞卢混合下载：免费章节直抓 + VIP聚合站回退
 func (c *FeiluClient) DownloadFeilu(bookID, outputDir string) (*DownloadResult, error) {
 	mkdir(outputDir)
 
@@ -177,27 +177,48 @@ func (c *FeiluClient) DownloadFeilu(bookID, outputDir string) (*DownloadResult, 
 
 	safeTitle := safeFilename(info.Title)
 	outputPath := fmt.Sprintf("%s/%s.txt", outputDir, safeTitle)
-
 	startTime := now()
+
+	// 聚合站备用
+	agg := NewSimpleAggregator()
+	aggBookID := ""
+	if aggResults := agg.Search(info.Title); len(aggResults) > 0 {
+		aggBookID = aggResults[0].BookID
+	}
+
 	var results []ChapterResult
-	downloaded := 0
+	downloaded, totalChars := 0, 0
+	freeCount, vipCount := 0, 0
 	var failedItems []string
-	totalChars := 0
 
 	for i, ch := range info.Chapters {
+		// ① 先试飞卢直连（免费章节）
 		content := c.FetchFeiluChapter(ch.ItemID)
 		if content != "" {
 			results = append(results, ChapterResult{Title: ch.Title, Content: content})
 			downloaded++
 			totalChars += cnCount(content)
+			freeCount++
+		} else if aggBookID != "" {
+			// ② 飞卢失败 → 聚合站回退（VIP章节）
+			content = agg.FetchChapter(aggBookID, ch.ItemID)
+			if content != "" {
+				results = append(results, ChapterResult{Title: ch.Title, Content: content})
+				downloaded++
+				totalChars += cnCount(content)
+				vipCount++
+			} else {
+				failedItems = append(failedItems, ch.Title)
+			}
 		} else {
-			failedItems = append(failedItems, fmt.Sprintf("%s(空/VIP)", ch.Title))
+			failedItems = append(failedItems, ch.Title)
 		}
 		if i%5 == 0 { msSleep(500) }
 	}
 
 	writeResults(outputPath, info.Title, info.Author, results, totalChars)
 
+	method := fmt.Sprintf("feilu_hybrid(free=%d,vip=%d)", freeCount, vipCount)
 	return &DownloadResult{
 		Success:       downloaded > 0,
 		Title:         info.Title,
@@ -208,6 +229,6 @@ func (c *FeiluClient) DownloadFeilu(bookID, outputDir string) (*DownloadResult, 
 		FailedCount:   len(failedItems),
 		Failed:        failedItems,
 		ElapsedSec:    since(startTime),
-		Method:        "feilu_direct",
+		Method:        method,
 	}, nil
 }
