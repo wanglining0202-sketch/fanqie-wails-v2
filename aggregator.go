@@ -11,11 +11,15 @@ import (
 )
 
 // ── 聚合站下载（全本，含VIP内容）──
-// 69shu.com / biquge / 等聚合站有起点+飞卢全本
+// 多源回退: 69shu → ibooktxt → du00
 
 const (
-	AGG_BASE = "https://www.69shu.com"
+	AGG1 = "https://www.69shu.com"
+	AGG2 = "https://www.ibooktxt.net"
+	AGG3 = "https://www.du00.co"
 )
+
+var aggSources = []string{AGG1, AGG2, AGG3}
 
 type AggregatorClient struct {
 	client *http.Client
@@ -35,90 +39,133 @@ func (c *AggregatorClient) get(u string) (string, error) {
 	return string(body), nil
 }
 
-// SearchAgg 聚合站搜索
+// SearchAgg 多源聚合搜索
 func (c *AggregatorClient) SearchAgg(keyword string) []BookResult {
-	searchURL := fmt.Sprintf("%s/search?key=%s", AGG_BASE, url.QueryEscape(keyword))
+	for _, baseURL := range aggSources {
+		results := c.searchOne(baseURL, keyword)
+		if len(results) > 0 { return results }
+	}
+	return nil
+}
+
+func (c *AggregatorClient) searchOne(baseURL, keyword string) []BookResult {
+	searchURL := fmt.Sprintf("%s/search/?searchkey=%s", baseURL, url.QueryEscape(keyword))
 	html, err := c.get(searchURL)
 	if err != nil { return nil }
 
-	// 69shu 搜索结果: <li><a href="/book/12345/"><h3>书名</h3></a><p>作者</p>
-	itemRe := regexp.MustCompile(`<li[^>]*>\s*<a[^>]*href="(/book/\d+/)"[^>]*>\s*<h3[^>]*>(.*?)</h3>\s*</a>\s*<p[^>]*>(.*?)</p>`)
+	// 通用匹配: <a href="/book/数字/">书名</a> 或 <a href="/编号/">书名</a>
+	itemRe := regexp.MustCompile(`<a[^>]*href="(/(?:book|txt|read|html)/?\d+[^"]*)"[^>]*>\s*(?:<h3[^>]*>)?([^<]{2,60})(?:</h3>)?\s*</a>`)
 	matches := itemRe.FindAllStringSubmatch(html, -1)
-
+	
 	var results []BookResult
 	for _, m := range matches {
-		bookID := strings.TrimPrefix(strings.TrimSuffix(m[1], "/"), "/book/")
+		bookID := strings.Trim(m[1], "/")
+		bookID = regexp.MustCompile(`[^\d]`).ReplaceAllString(bookID, "") // 只保留数字
+		title := strings.TrimSpace(m[2])
+		if len(title) < 2 || bookID == "" { continue }
 		results = append(results, BookResult{
 			BookID: bookID,
-			Title:  strings.TrimSpace(m[2]),
-			Author: strings.TrimSpace(m[3]),
-			Source: "69shu",
+			Title:  title,
+			Source: "aggregator",
 		})
+		if len(results) >= 20 { break }
 	}
 	return results
 }
 
-// GetAggInfo 聚合站书籍详情（全本章节列表）
+// GetAggInfo 聚合站书籍详情（多源回退）
 func (c *AggregatorClient) GetAggInfo(bookID string) (*BookInfo, error) {
-	// 69shu 书籍目录页: /book/12345/
-	infoURL := fmt.Sprintf("%s/book/%s/", AGG_BASE, bookID)
-	html, err := c.get(infoURL)
-	if err != nil { return nil, err }
-
-	titleRe := regexp.MustCompile(`<h1[^>]*>(.*?)</h1>`)
-	authorRe := regexp.MustCompile(`作者[：:]\s*(.*?)<`)
-	descRe := regexp.MustCompile(`<div[^>]*class="[^"]*intro[^"]*"[^>]*>(.*?)</div>`)
-
-	title, author, desc := "", "", ""
-	if m := titleRe.FindStringSubmatch(html); m != nil { title = strings.TrimSpace(m[1]) }
-	if m := authorRe.FindStringSubmatch(html); m != nil { author = strings.TrimSpace(m[1]) }
-	if m := descRe.FindStringSubmatch(html); m != nil { desc = stripTags(strings.TrimSpace(m[1])) }
-
-	// 章节列表: <li><a href="/txt/12345/章节id.html">章节名</a></li>
-	var chapters []Chapter
-	chRe := regexp.MustCompile(`<a[^>]*href="(/txt/\d+/(\d+)\.html)"[^>]*>(.*?)</a>`)
-	for _, m := range chRe.FindAllStringSubmatch(html, -1) {
-		chapters = append(chapters, Chapter{
-			ItemID: m[2],
-			Title:  strings.TrimSpace(m[3]),
-		})
+	for _, baseURL := range aggSources {
+		info, err := c.getInfoOne(baseURL, bookID)
+		if err == nil && info != nil && info.Found { return info, nil }
 	}
-
-	return &BookInfo{
-		Found:        title != "",
-		Source:       "69shu",
-		BookID:       bookID,
-		Title:        title,
-		Author:       author,
-		Description:  desc,
-		ChapterCount: len(chapters),
-		Chapters:     chapters,
-	}, nil
+	return nil, fmt.Errorf("所有聚合站均未找到")
 }
 
-// FetchAggChapter 聚合站章节内容（全本无加密）
+func (c *AggregatorClient) getInfoOne(baseURL, bookID string) (*BookInfo, error) {
+	paths := []string{
+		fmt.Sprintf("%s/book/%s/", baseURL, bookID),
+		fmt.Sprintf("%s/txt/%s/", baseURL, bookID),
+		fmt.Sprintf("%s/%s/", baseURL, bookID),
+	}
+	for _, infoURL := range paths {
+		html, err := c.get(infoURL)
+		if err != nil { continue }
+		
+		titleRe := regexp.MustCompile(`<h1[^>]*>(.*?)</h1>`)
+		authorRe := regexp.MustCompile(`作者[：:]\s*(.*?)[<\n]`)
+		descRe := regexp.MustCompile(`<div[^>]*class="[^"]*intro[^"]*"[^>]*>(.*?)</div>`)
+
+		title, author, desc := "", "", ""
+		if m := titleRe.FindStringSubmatch(html); m != nil { title = strings.TrimSpace(m[1]) }
+		if m := authorRe.FindStringSubmatch(html); m != nil { author = strings.TrimSpace(m[1]) }
+		if m := descRe.FindStringSubmatch(html); m != nil { desc = stripTags(strings.TrimSpace(m[1])) }
+
+		// 章节列表
+		var chapters []Chapter
+		chRe := regexp.MustCompile(`<a[^>]*href="([^"]*/(\d+)\.html)"[^>]*>([^<]{2,80})</a>`)
+		for _, m := range chRe.FindAllStringSubmatch(html, -1) {
+			chapters = append(chapters, Chapter{ItemID: m[2], Title: strings.TrimSpace(m[3])})
+		}
+		if len(chapters) == 0 {
+			chRe2 := regexp.MustCompile(`<a[^>]*href="([^"]*\d+[^"]*)"[^>]*>([^<]*(?:章|节|回|卷)[^<]*)</a>`)
+			for _, m := range chRe2.FindAllStringSubmatch(html, -1) {
+				id := regexp.MustCompile(`(\d+)`).FindString(m[1])
+				if id != "" {
+					chapters = append(chapters, Chapter{ItemID: id, Title: strings.TrimSpace(m[2])})
+				}
+			}
+		}
+
+		if title != "" && len(chapters) > 0 {
+			return &BookInfo{
+				Found: true, Source: "aggregator", BookID: bookID,
+				Title: title, Author: author, Description: desc,
+				ChapterCount: len(chapters), Chapters: chapters,
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("未找到")
+}
+
+// FetchAggChapter 聚合站章节内容（多源回退）
 func (c *AggregatorClient) FetchAggChapter(bookID, chapterID string) string {
-	chURL := fmt.Sprintf("%s/txt/%s/%s.html", AGG_BASE, bookID, chapterID)
-	html, err := c.get(chURL)
-	if err != nil { return "" }
+	for _, baseURL := range aggSources {
+		paths := []string{
+			fmt.Sprintf("%s/txt/%s/%s.html", baseURL, bookID, chapterID),
+			fmt.Sprintf("%s/%s/%s.html", baseURL, bookID, chapterID),
+			fmt.Sprintf("%s/book/%s/%s.html", baseURL, bookID, chapterID),
+		}
+		for _, chURL := range paths {
+			html, err := c.get(chURL)
+			if err != nil { continue }
+			content := extractChapterContent(html)
+			if content != "" { return content }
+		}
+	}
+	return ""
+}
 
-	// 正文在 <div class="txtnav"> 中
-	contentRe := regexp.MustCompile(`<div[^>]*class="[^"]*txtnav[^"]*"[^>]*>(.*?)</div>`)
-	m := contentRe.FindStringSubmatch(html)
-	if m == nil { return "" }
-
-	content := m[1]
-	content = stripTags(content)
-	content = strings.ReplaceAll(content, "&nbsp;", " ")
-	content = strings.ReplaceAll(content, "&lt;", "<")
-	content = strings.ReplaceAll(content, "&gt;", ">")
-	content = strings.ReplaceAll(content, "&amp;", "&")
-	content = strings.ReplaceAll(content, "69书吧", "")
-	content = strings.ReplaceAll(content, "www.69shu.com", "")
-	content = regexp.MustCompile(`\n{3,}`).ReplaceAllString(content, "\n\n")
-
-	if cnCount(content) >= 100 {
-		return strings.TrimSpace(content)
+func extractChapterContent(html string) string {
+	// 多种正文容器匹配
+	patterns := []string{
+		`<div[^>]*class="[^"]*txtnav[^"]*"[^>]*>(.*?)</div>`,
+		`<div[^>]*id="content"[^>]*>(.*?)</div>`,
+		`<div[^>]*class="[^"]*content[^"]*"[^>]*>(.*?)</div>`,
+		`<article[^>]*>(.*?)</article>`,
+	}
+	for _, pat := range patterns {
+		if m := regexp.MustCompile(pat).FindStringSubmatch(html); m != nil {
+			content := m[1]
+			content = stripTags(content)
+			content = strings.ReplaceAll(content, "&nbsp;", " ")
+			content = strings.ReplaceAll(content, "&lt;", "<")
+			content = strings.ReplaceAll(content, "&gt;", ">")
+			content = strings.ReplaceAll(content, "&amp;", "&")
+			content = regexp.MustCompile(`(?i)(69书吧|www\.69shu\.com|www\.ibooktxt\.net|顶点小说|笔趣阁|du00\.co|读零零)`).ReplaceAllString(content, "")
+			content = regexp.MustCompile(`\n{3,}`).ReplaceAllString(content, "\n\n")
+			if cnCount(content) >= 100 { return strings.TrimSpace(content) }
+		}
 	}
 	return ""
 }
