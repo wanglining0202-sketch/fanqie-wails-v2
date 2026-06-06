@@ -103,11 +103,11 @@ func (a *App) DownloadFeilu(bookID string, outputDir string) string {
 	return toJSON(result)
 }
 
-// ── 聚合站（多源自适应）──
+// ── 聚合站（搜索引擎定位）──
 
 func (a *App) SearchAgg(query string) string {
-	sm := NewSourceManager()
-	results := sm.Search(query)
+	sa := NewSearchAggregator()
+	results := sa.Search(query)
 	return toJSON(map[string]interface{}{"results": results, "count": len(results)})
 }
 
@@ -116,8 +116,9 @@ func (a *App) DownloadAgg(bookID string, outputDir string) string {
 		home, _ := os.UserHomeDir()
 		outputDir = filepath.Join(home, "Downloads", "LaoWang")
 	}
-	sm := NewSourceManager()
-	result, err := sm.Download(bookID, outputDir)
+	sa := NewSearchAggregator()
+	// bookID is actually keyword in agg mode
+	result, err := sa.Download(bookID, outputDir)
 	if err != nil { return jsonErr(err) }
 	return toJSON(result)
 }

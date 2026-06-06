@@ -113,9 +113,20 @@ func (sm *SourceManager) Search(keyword string) []BookResult {
 }
 
 func (sm *SourceManager) searchOne(s *NovelSource, keyword string) []BookResult {
-	searchURL := fmt.Sprintf("%s/search/?searchkey=%s", s.BaseURL, url.QueryEscape(keyword))
-	html, err := sm.get(searchURL)
-	if err != nil { return nil }
+	// 每个源用不同的搜索URL格式
+	searchURLs := []string{
+		fmt.Sprintf("%s/search/?searchkey=%s", s.BaseURL, url.QueryEscape(keyword)),
+		fmt.Sprintf("%s/search?key=%s", s.BaseURL, url.QueryEscape(keyword)),
+		fmt.Sprintf("%s/search.html?k=%s", s.BaseURL, url.QueryEscape(keyword)),
+		fmt.Sprintf("%s/ss/?searchkey=%s", s.BaseURL, url.QueryEscape(keyword)),
+	}
+	var html string
+	var err error
+	for _, u := range searchURLs {
+		html, err = sm.get(u)
+		if err == nil && len(html) > 500 { break }
+	}
+	if err != nil || len(html) < 500 { return nil }
 
 	itemRe := regexp.MustCompile(`<a[^>]*href="(/(?:book|txt|read|html)/?\d+[^"]*)"[^>]*>\s*(?:<h3[^>]*>)?([^<]{2,60})(?:</h3>)?\s*</a>`)
 	matches := itemRe.FindAllStringSubmatch(html, -1)
