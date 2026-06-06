@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sync"
 
@@ -85,7 +86,9 @@ func (a *App) OpenDirectory(path string) {
 	if path == "" {
 		return
 	}
-	runtime.BrowserOpenURL(a.ctx, "file://"+path)
+	// 用 Windows 资源管理器打开目录
+	cmd := exec.Command("explorer", path)
+	cmd.Start()
 }
 
 // ── 激活 API ──

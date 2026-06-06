@@ -529,6 +529,7 @@ function syncSegments() {
 }
 
 function toastTask(title, message, progress, status) {
+  $("#taskDock").style.display = ""; // 恢复显示（关闭按钮会隐藏它）
   $("#taskTitle").textContent = title;
   $("#taskMessage").textContent = message;
   $("#taskStatus").textContent = status;
