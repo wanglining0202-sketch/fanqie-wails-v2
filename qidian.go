@@ -29,74 +29,77 @@ func (c *QidianClient) get(u string) (string, error) {
 	return string(body), nil
 }
 
-// SearchQidian 搜索起点书籍（移动端）
+// SearchQidian 搜索 + ID 直通
 func (c *QidianClient) SearchQidian(keyword string) []BookResult {
-	// 移动端搜索
+	// 纯数字ID → 直接返回，不走搜索
+	if regexp.MustCompile(`^\d{7,}$`).MatchString(keyword) {
+		info, err := c.GetQidianInfo(keyword)
+		if err == nil && info.Found {
+			return []BookResult{{BookID: keyword, Title: info.Title, Author: info.Author, Source: "qidian"}}
+		}
+	}
+
+	// 文字搜索
 	searchURL := fmt.Sprintf("https://m.qidian.com/soushu/%s.html?pageNum=1", url.QueryEscape(keyword))
 	html, err := c.get(searchURL)
 	if err != nil { return nil }
 
-	// 提取: <a href="/book/数字/">书名</a>
-	itemRe := regexp.MustCompile(`<a[^>]*href="/book/(\d+)/"[^>]*>\s*<h3[^>]*>([^<]+)</h3>`)
-	matches := itemRe.FindAllStringSubmatch(html, -1)
-	if len(matches) == 0 {
-		// 回退: 如果直接是 book ID，跳过搜索
-		if regexp.MustCompile(`^\d{7,}$`).MatchString(keyword) {
-			return []BookResult{{BookID: keyword, Title: "ID:" + keyword, Source: "qidian_mobile"}}
-		}
-	}
+	// <a href="/book/数字/"><h3>书名</h3></a>
+	re := regexp.MustCompile(`<a[^>]*href="/book/(\d+)/"[^>]*>\s*<h3[^>]*>([^<]+)</h3>`)
+	matches := re.FindAllStringSubmatch(html, -1)
 
 	var results []BookResult
 	for _, m := range matches {
 		results = append(results, BookResult{
-			BookID: m[1], Title: strings.TrimSpace(m[2]),
-			Source: "qidian_mobile",
+			BookID: m[1], Title: strings.TrimSpace(m[2]), Source: "qidian",
 		})
 	}
 	return results
 }
 
-// GetQidianInfo 获取起点书籍详情（移动端）
+// GetQidianInfo 获取起点书籍详情
 func (c *QidianClient) GetQidianInfo(bookID string) (*BookInfo, error) {
 	html, err := c.get("https://m.qidian.com/book/" + bookID + "/")
 	if err != nil { return nil, err }
 
 	title, author := "", ""
-	if m := regexp.MustCompile(`<h1[^>]*>([^<]+)</h1>`).FindStringSubmatch(html); m != nil { title = strings.TrimSpace(m[1]) }
-	if m := regexp.MustCompile(`作者[：:]\s*<a[^>]*>([^<]+)</a>`).FindStringSubmatch(html); m != nil { author = strings.TrimSpace(m[1]) }
-
-	// 章节列表: /chapter/bookID/chapterID/
-	var chapters []Chapter
-	chRe := regexp.MustCompile(`href="/chapter/(\d+)/(\d+)/"[^>]*>([^<]+)</a>`)
-	for _, m := range chRe.FindAllStringSubmatch(html, -1) {
-		chapters = append(chapters, Chapter{
-			ItemID: m[2], Title: strings.TrimSpace(m[3]),
-		})
+	if m := regexp.MustCompile(`<h1[^>]*>([^<]+)</h1>`).FindStringSubmatch(html); m != nil {
+		title = strings.TrimSpace(m[1])
 	}
-	// 如果主页章节少，尝试目录页
-	if len(chapters) < 10 {
-		catHTML, _ := c.get("https://m.qidian.com/book/" + bookID + "/catalog/")
-		for _, m := range chRe.FindAllStringSubmatch(catHTML, -1) {
-			chapters = append(chapters, Chapter{
-				ItemID: m[2], Title: strings.TrimSpace(m[3]),
-			})
+	if m := regexp.MustCompile(`作者[：:]\s*<a[^>]*>([^<]+)</a>`).FindStringSubmatch(html); m != nil {
+		author = strings.TrimSpace(m[1])
+	}
+
+	// 从目录页获取完整章节列表
+	var chapters []Chapter
+	catHTML, _ := c.get("https://m.qidian.com/book/" + bookID + "/catalog/")
+	// 格式: href="//m.qidian.com/chapter/bookID/chapterID/" data-cid="chapterID" title="青山 1、归零"
+	chRe := regexp.MustCompile(`data-cid="(\d+)"[^>]*title="([^"]+)"`)
+	for _, m := range chRe.FindAllStringSubmatch(catHTML, -1) {
+		chapters = append(chapters, Chapter{ItemID: m[1], Title: strings.TrimSpace(m[2])})
+	}
+	// 回退：主页的最近章节
+	if len(chapters) == 0 {
+		chRe2 := regexp.MustCompile(`href="//m\.qidian\.com/chapter/\d+/(\d+)/"[^>]*data-v-[^>]*>\s*([^<]+)\s*</a>`)
+		for _, m := range chRe2.FindAllStringSubmatch(html, -1) {
+			chapters = append(chapters, Chapter{ItemID: m[1], Title: strings.TrimSpace(m[2])})
 		}
 	}
 
 	return &BookInfo{
-		Found: title != "", Source: "qidian_mobile", BookID: bookID,
+		Found: title != "", Source: "qidian", BookID: bookID,
 		Title: title, Author: author, ChapterCount: len(chapters), Chapters: chapters,
 	}, nil
 }
 
-// FetchQidianChapter 获取单章内容（移动端）
+// FetchQidianChapter 获取单章内容
 func (c *QidianClient) FetchQidianChapter(bookID, chapterID string) string {
 	html, err := c.get(fmt.Sprintf("https://m.qidian.com/chapter/%s/%s/", bookID, chapterID))
 	if err != nil { return "" }
 
-	// 正文在 <div class="content ..."> 中
-	contentRe := regexp.MustCompile(`<div[^>]*class="[^"]*content[^"]*"[^>]*>(.*?)</div>`)
-	m := contentRe.FindStringSubmatch(html)
+	// <div class="content ..."><p>文字</p></div>
+	re := regexp.MustCompile(`<div[^>]*class="[^"]*content[^"]*"[^>]*>(.*?)</div>`)
+	m := re.FindStringSubmatch(html)
 	if m == nil { return "" }
 
 	content := m[1]
