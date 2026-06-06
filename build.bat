@@ -1,8 +1,8 @@
 @echo off
 REM 番茄小说下载器 — Wails v2 构建脚本
-REM 需要: Go 1.18+, Wails CLI, gcc (mingw64)
+REM 需要: Go 1.18+, Wails CLI, gcc (mingw64), NSIS (makensis)
 
-set PATH=C:\Program Files\Go\bin;%USERPROFILE%\go\bin;J:\AIClear-Mod\mingw64\bin;%PATH%
+set PATH=C:\Program Files\Go\bin;%USERPROFILE%\go\bin;J:\AIClear-Mod\mingw64\bin;"C:\Program Files (x86)\NSIS";%PATH%
 
 echo === 检查 Wails CLI ===
 wails version >nul 2>&1
@@ -11,20 +11,29 @@ if %ERRORLEVEL% NEQ 0 (
     go install github.com/wailsapp/wails/v2/cmd/wails@latest
 )
 
-echo === 构建桌面应用 ===
-echo   策略: -webview2 download (首次运行自动下载运行时)
-echo   如需内嵌WebView2: 安装NSIS后运行 wails build -nsis -webview2 embed
-echo.
-wails build -webview2 download
+echo === 检查 NSIS ===
+makensis /VERSION >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo NSIS 未安装。请从 https://nsis.sourceforge.io/Download 下载安装。
+    echo 没有 NSIS 将生成普通 exe (不带 WebView2 离线包)。
+    echo.
+    echo === 构建普通 exe ===
+    wails build -webview2 download
+    goto :done
+)
 
+echo === 构建完整离线安装包 (包含 WebView2) ===
+wails build -nsis -webview2 embed
+
+:done
 if %ERRORLEVEL% EQU 0 (
     echo.
     echo === 构建成功 ===
-    echo 输出: build\bin\fanqie-novel-downloader.exe
-    echo.
-    echo 分发: 直接发送 exe 即可。Win10/11 自带 WebView2.
-    echo       老系统首次运行会自动下载运行时 (~100MB).
-    echo       如需要完全离线安装包: 先装 NSIS 再 wails build -nsis -webview2 embed
+    if exist "build\bin\番茄小说下载器-amd64-installer.exe" (
+        echo 安装包: build\bin\番茄小说下载器-amd64-installer.exe
+    ) else (
+        echo 应用:   build\bin\fanqie-novel-downloader.exe
+    )
 ) else (
     echo.
     echo === 构建失败 ===
