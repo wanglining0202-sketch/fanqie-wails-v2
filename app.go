@@ -66,13 +66,13 @@ func (a *App) GetQidianInfo(bookID string) string {
 	return toJSON(result)
 }
 
-func (a *App) DownloadQidian(bookID string, outputDir string) string {
+func (a *App) DownloadQidianHybrid(bookID string, outputDir string) string {
 	if outputDir == "" {
 		home, _ := os.UserHomeDir()
 		outputDir = filepath.Join(home, "Downloads", "LaoWang")
 	}
 	qd := NewQidianClient()
-	result, err := qd.DownloadQidian(bookID, outputDir)
+	result, err := qd.DownloadQidianHybrid(bookID, outputDir)
 	if err != nil { return jsonErr(err) }
 	return toJSON(result)
 }

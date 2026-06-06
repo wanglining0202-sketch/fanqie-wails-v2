@@ -22,8 +22,8 @@ export function DownloadFeilu(arg1, arg2) {
   return window['go']['main']['App']['DownloadFeilu'](arg1, arg2);
 }
 
-export function DownloadQidian(arg1, arg2) {
-  return window['go']['main']['App']['DownloadQidian'](arg1, arg2);
+export function DownloadQidianHybrid(arg1, arg2) {
+  return window['go']['main']['App']['DownloadQidianHybrid'](arg1, arg2);
 }
 
 export function GetBookInfo(arg1) {

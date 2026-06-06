@@ -150,43 +150,63 @@ func (c *QidianClient) FetchQidianChapter(bookID, chapterID string) string {
 
 // ── 起点下载 ──
 
-func (c *QidianClient) DownloadQidian(bookID, outputDir string) (*DownloadResult, error) {
+// DownloadQidianHybrid 混合下载：免费章节直抓 + VIP聚合站回退
+func (c *QidianClient) DownloadQidianHybrid(bookID, outputDir string) (*DownloadResult, error) {
 	mkdir(outputDir)
 
 	info, err := c.GetQidianInfo(bookID)
 	if err != nil || !info.Found {
 		return &DownloadResult{Success: false, Error: "未找到书籍"}, nil
 	}
-
 	if len(info.Chapters) == 0 {
 		return &DownloadResult{Success: false, Error: "无章节数据"}, nil
 	}
 
 	safeTitle := safeFilename(info.Title)
 	outputPath := fmt.Sprintf("%s/%s.txt", outputDir, safeTitle)
-
 	startTime := now()
 
-	// 单线程顺序下载（起点反爬严格）
+	// 聚合站备用
+	agg := NewSimpleAggregator()
+	// 用书名在聚合站搜一下，获取 bookID（用于章节回退）
+	aggBookID := ""
+	if aggResults := agg.Search(info.Title); len(aggResults) > 0 {
+		aggBookID = aggResults[0].BookID
+	}
+
 	var results []ChapterResult
-	downloaded := 0
+	downloaded, totalChars := 0, 0
+	freeCount, vipCount := 0, 0
 	var failedItems []string
-	totalChars := 0
 
 	for i, ch := range info.Chapters {
+		// ① 先试起点直连（免费章节）
 		content := c.FetchQidianChapter(bookID, ch.ItemID)
 		if content != "" {
 			results = append(results, ChapterResult{Title: ch.Title, Content: content})
 			downloaded++
 			totalChars += cnCount(content)
+			freeCount++
+		} else if aggBookID != "" {
+			// ② 起点失败 → 聚合站回退（VIP章节）
+			content = agg.FetchChapter(aggBookID, ch.ItemID)
+			if content != "" {
+				results = append(results, ChapterResult{Title: ch.Title, Content: content})
+				downloaded++
+				totalChars += cnCount(content)
+				vipCount++
+			} else {
+				failedItems = append(failedItems, ch.Title)
+			}
 		} else {
-			failedItems = append(failedItems, fmt.Sprintf("%s(空/VIP)", ch.Title))
+			failedItems = append(failedItems, ch.Title)
 		}
-		if i%5 == 0 { msSleep(500) }
+		if i%5 == 0 { msSleep(300) }
 	}
 
 	writeResults(outputPath, info.Title, info.Author, results, totalChars)
 
+	method := fmt.Sprintf("qidian_hybrid(free=%d,vip=%d)", freeCount, vipCount)
 	return &DownloadResult{
 		Success:       downloaded > 0,
 		Title:         info.Title,
@@ -197,6 +217,6 @@ func (c *QidianClient) DownloadQidian(bookID, outputDir string) (*DownloadResult
 		FailedCount:   len(failedItems),
 		Failed:        failedItems,
 		ElapsedSec:    since(startTime),
-		Method:        "qidian_direct",
+		Method:        method,
 	}, nil
 }

@@ -11,7 +11,7 @@ export function DownloadBook(arg1:string,arg2:string):Promise<string>;
 
 export function DownloadFeilu(arg1:string,arg2:string):Promise<string>;
 
-export function DownloadQidian(arg1:string,arg2:string):Promise<string>;
+export function DownloadQidianHybrid(arg1:string,arg2:string):Promise<string>;
 
 export function GetBookInfo(arg1:string):Promise<string>;
 

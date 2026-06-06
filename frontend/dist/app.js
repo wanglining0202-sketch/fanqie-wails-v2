@@ -50,7 +50,7 @@ function goCall(method, ...args) {
 
 async function searchBooks(q) {
   switch (currentPlatform) {
-    case "qidian": return goCall("SearchAgg", q);  // 起点→聚合站
+    case "qidian": return goCall("SearchQidian", q);  // 搜索走起点官网
     case "feilu":  return goCall("SearchFeilu", q);
     case "agg":    return goCall("SearchAgg", q);
     default:       return goCall("Search", q);
@@ -67,7 +67,7 @@ async function getBookInfo(id) {
 
 async function downloadBook(id, dir) {
   switch (currentPlatform) {
-    case "qidian": return goCall("DownloadAgg", id, dir || state.defaultDir);  // 起点→聚合站下载
+    case "qidian": return goCall("DownloadQidianHybrid", id, dir || state.defaultDir);  // 免费直抓 + VIP聚合站
     case "feilu":  return goCall("DownloadFeilu", id, dir || state.defaultDir);
     case "agg":    return goCall("DownloadAgg", id, dir || state.defaultDir);
     default:       return goCall("DownloadBook", id, dir || state.defaultDir);
