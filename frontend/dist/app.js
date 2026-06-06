@@ -74,63 +74,82 @@ async function selectDir() {
 // ── 激活流程 ──
 
 function setupActivation() {
-  const input = $("#activationCode");
-
-  // 自动格式化
-  input.addEventListener("input", () => {
-    let raw = input.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
-    if (raw.length > 16) raw = raw.slice(0, 16);
-    let formatted = "";
-    for (let i = 0; i < raw.length; i++) {
-      if (i > 0 && i % 4 === 0) formatted += "-";
-      formatted += raw[i];
-    }
-    input.value = formatted;
-  });
-
-  // 全局激活函数（onclick 直接调用）
+  // 激活函数 — onclick 直接绑定
   window._doActivate = async function () {
-    const msg = $("#activationMsg");
-    const btn = $("#activationBtn");
-    const raw = input.value;
-    const code = raw.replace(/-/g, "");
+    var msg = document.getElementById("activationMsg");
+    if (!msg) return;
+    msg.textContent = "正在验证...";
+    msg.style.color = "#4cc9f0";
+
+    var input = document.getElementById("activationCode");
+    var raw = (input && input.value) || "";
+    var code = raw.replace(/-/g, "");
 
     if (code.length < 16) {
       msg.textContent = "请输入完整注册码";
       msg.style.color = "var(--orange)";
       return;
     }
-    btn.disabled = true;
-    btn.textContent = "验证中...";
-    msg.textContent = "";
 
-    const result = await goCall("Activate", raw);
+    var btn = document.getElementById("activationBtn");
+    if (btn) { btn.disabled = true; btn.textContent = "验证中..."; }
+
+    var result = await goCall("Activate", raw);
     if (result.error) {
       msg.textContent = result.error;
       msg.style.color = "#ff6b6b";
-      btn.disabled = false;
-      btn.textContent = "激活";
+      if (btn) { btn.disabled = false; btn.textContent = "激活"; }
     } else if (result.activated) {
       msg.textContent = "激活成功！正在启动...";
       msg.style.color = "#4cc9f0";
-      setTimeout(() => {
-        $("#activationOverlay").style.display = "none";
+      setTimeout(function () {
+        document.getElementById("activationOverlay").style.display = "none";
         initMain();
       }, 800);
     }
   };
+
+  // 自动格式化
+  var inp = document.getElementById("activationCode");
+  if (inp) {
+    inp.addEventListener("input", function () {
+      var raw = inp.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+      if (raw.length > 16) raw = raw.slice(0, 16);
+      var f = "";
+      for (var i = 0; i < raw.length; i++) {
+        if (i > 0 && i % 4 === 0) f += "-";
+        f += raw[i];
+      }
+      inp.value = f;
+    });
+  }
 }
 
 // ── 入口：检查激活 → 进主界面 ──
 
 async function init() {
-  const status = await goCall("CheckActivation");
-  if (!status || !status.activated) {
-    $("#activationOverlay").style.display = "flex";
+  // 兜底：3秒后如果还没反应，强制显示激活界面
+  var fallbackTimer = setTimeout(function () {
+    var overlay = document.getElementById("activationOverlay");
+    if (overlay && overlay.style.display !== "none") return;
+    if (overlay) overlay.style.display = "flex";
     setupActivation();
-    return;
+  }, 3000);
+
+  try {
+    var status = await goCall("CheckActivation");
+    clearTimeout(fallbackTimer);
+    if (!status || !status.activated) {
+      document.getElementById("activationOverlay").style.display = "flex";
+      setupActivation();
+      return;
+    }
+    initMain();
+  } catch (e) {
+    clearTimeout(fallbackTimer);
+    document.getElementById("activationOverlay").style.display = "flex";
+    setupActivation();
   }
-  initMain();
 }
 
 // ── 主界面初始化 ──
