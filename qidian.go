@@ -69,14 +69,19 @@ func (c *QidianClient) GetQidianInfo(bookID string) (*BookInfo, error) {
 	if m := regexp.MustCompile(`作者[：:]\s*<a[^>]*>([^<]+)</a>`).FindStringSubmatch(html); m != nil {
 		author = strings.TrimSpace(m[1])
 	}
+	if author == "" {
+		if m := regexp.MustCompile(`"authorName":"([^"]+)"`).FindStringSubmatch(html); m != nil {
+			author = m[1]
+		}
+	}
 
-	// 从目录页获取完整章节列表
+	// 从目录页获取章节列表（限200章避免JSON过大）
 	var chapters []Chapter
 	catHTML, _ := c.get("https://m.qidian.com/book/" + bookID + "/catalog/")
-	// data-cid="794296040" ... ><div><h2>1、归零</h2> 或 <h3>700、替死还债</h3>
 	chRe := regexp.MustCompile(`data-cid="(\d+)"[^>]*>[^<]*(?:<div[^>]*>)?\s*<(h[23])[^>]*>([^<]+)</h[23]>`)
 	for _, m := range chRe.FindAllStringSubmatch(catHTML, -1) {
 		chapters = append(chapters, Chapter{ItemID: m[1], Title: strings.TrimSpace(m[3])})
+		if len(chapters) >= 200 { break }
 	}
 	// 回退：主页的最近章节
 	if len(chapters) == 0 {
