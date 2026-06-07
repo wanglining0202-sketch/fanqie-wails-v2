@@ -72,7 +72,11 @@ func (a *App) DownloadQidianHybrid(bookID string, outputDir string) string {
 		outputDir = filepath.Join(home, "Downloads", "LaoWang")
 	}
 	qd := NewQidianClient()
-	result, err := qd.DownloadQidianHybrid(bookID, outputDir)
+	result, err := qd.DownloadQidianHybrid(bookID, outputDir, func(done, total int) {
+		runtime.EventsEmit(a.ctx, "download-progress", map[string]interface{}{
+			"done": done, "total": total, "platform": "qidian",
+		})
+	})
 	if err != nil { return jsonErr(err) }
 	return toJSON(result)
 }

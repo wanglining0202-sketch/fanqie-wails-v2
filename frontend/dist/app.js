@@ -423,11 +423,26 @@ async function downloadFanqie(book) {
     id: book.id, title: book.title, author: book.author,
     format: state.format,
     time: new Date().toLocaleString("zh-CN", { hour12: false }),
-    status: "下载中", message: "代理API下载中...",
+    status: "下载中", message: "并发下载中...",
   };
   state.history.unshift(record);
   renderHistory();
-  toastTask(book.title, "代理API极速下载中...", 10, "下载中");
+  toastTask(book.title, "并发极速下载中...", 5, "下载中");
+
+  // 监听进度事件
+  var progressTotal = 0;
+  try {
+    window.go.main.App.GetTrending; // 确保 runtime 就绪
+    if (window.runtime && window.runtime.EventsOn) {
+      window.runtime.EventsOn("download-progress", function (data) {
+        if (data.total > 0) {
+          progressTotal = data.total;
+          var pct = Math.round(data.done / data.total * 100);
+          toastTask(book.title, data.done + "/" + data.total + " 章", Math.min(98, pct), "下载中");
+        }
+      });
+    }
+  } catch(e) {}
 
   try {
     const result = await downloadBook(book.id, state.defaultDir);
