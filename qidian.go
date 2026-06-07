@@ -73,12 +73,10 @@ func (c *QidianClient) GetQidianInfo(bookID string) (*BookInfo, error) {
 	// 从目录页获取完整章节列表
 	var chapters []Chapter
 	catHTML, _ := c.get("https://m.qidian.com/book/" + bookID + "/catalog/")
-	// <a ... data-cid="794296040" title="青山 1、归零在线阅读" ...><div><h2>1、归零</h2>...</a>
-	chRe := regexp.MustCompile(`data-cid="(\d+)"[^>]*title="([^"]+)"`)
+	// data-cid="794296040" ... ><div><h2>1、归零</h2> 或 <h3>700、替死还债</h3>
+	chRe := regexp.MustCompile(`data-cid="(\d+)"[^>]*>[^<]*(?:<div[^>]*>)?\s*<(h[23])[^>]*>([^<]+)</h[23]>`)
 	for _, m := range chRe.FindAllStringSubmatch(catHTML, -1) {
-		title := strings.TrimSpace(m[2])
-		title = regexp.MustCompile(`在线阅读$`).ReplaceAllString(title, "")
-		chapters = append(chapters, Chapter{ItemID: m[1], Title: title})
+		chapters = append(chapters, Chapter{ItemID: m[1], Title: strings.TrimSpace(m[3])})
 	}
 	// 回退：主页的最近章节
 	if len(chapters) == 0 {
@@ -99,8 +97,8 @@ func (c *QidianClient) FetchQidianChapter(bookID, chapterID string) string {
 	html, err := c.get(fmt.Sprintf("https://m.qidian.com/chapter/%s/%s/", bookID, chapterID))
 	if err != nil { return "" }
 
-	// <div class="content ..."><p>文字</p></div>
-	re := regexp.MustCompile(`<div[^>]*class="[^"]*content[^"]*"[^>]*>(.*?)</div>`)
+	// <main class="content ..."> 或 <div class="content ...">
+	re := regexp.MustCompile(`<[^>]+class="[^"]*content[^"]*"[^>]*>(.*?)</(?:main|div)>`)
 	m := re.FindStringSubmatch(html)
 	if m == nil { return "" }
 
